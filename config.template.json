@@ -1,0 +1,14 @@
+{
+  "MAX_STRESS": 3000,
+  "TEST_TTL_TIMES": 10,
+  "INIT_STRESS_TEST": 10,
+  "X_STRESS": 2,
+  "WARMING_TIME": 3,
+  "COOL_DOWN_SECOND": 5,
+  "BREAK_TIME_SECOND": 60,
+  "DB_USER": "root",
+  "DB_PASSWORD": "@",
+  "DB_HOST": "",
+  "DB_PORT": "",
+  "DB_NAME": ""
+}

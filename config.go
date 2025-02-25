@@ -20,6 +20,9 @@ type Config struct {
 	DBHost          string `json:"DB_HOST"`
 	DBPort          string `json:"DB_PORT"`
 	DBName          string `json:"DB_NAME"`
+	ResultTest      string `json:"RESULT_TEST_DIR"`
+	SQLDir          string `json:"SQL_DIR"`
+	SQLTestDir      string `json:"SQL_TEST_DIR"`
 }
 
 func getTestConfig() Config {

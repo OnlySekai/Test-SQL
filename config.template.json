@@ -10,5 +10,8 @@
   "DB_PASSWORD": "@",
   "DB_HOST": "",
   "DB_PORT": "",
-  "DB_NAME": ""
+  "DB_NAME": "dev",
+  "SQL_DIR": "testcase",
+  "SQL_TEST_DIR": "sqlTest",
+  "RESULT_TEST_DIR": "results"
 }

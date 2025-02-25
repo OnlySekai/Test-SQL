@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -38,6 +39,10 @@ func main() {
 		} else {
 			testNormalTTL(db)
 		}
+	case "acc":
+		{
+			testAcc(db)
+		}
 	default:
 		log.Fatalf("Unknown mode: %s", *mode)
 	}
@@ -46,18 +51,18 @@ func main() {
 }
 
 func testNormalTTL(db *sql.DB) {
-	sqlFiles := GetQueries("./result")
+	sqlFiles := GetQueries(TestConfig.SQLDir)
 	for _, query := range sqlFiles {
 		TestTTL(func() error {
 			return RunSingle(db, &query)
-		}, query.fileName)
+		}, query.getFileName())
 		breakTime()
 	}
 }
 
 func testParTTL(db *sql.DB) {
 	// get sub dir in result
-	subDirs, err := os.ReadDir("./result")
+	subDirs, err := os.ReadDir(TestConfig.SQLDir)
 	if err != nil {
 		log.Fatalf("Failed to read directory: %v", err)
 	}
@@ -65,30 +70,32 @@ func testParTTL(db *sql.DB) {
 		if !subDir.IsDir() {
 			continue
 		}
-		sqlFiles := GetQueries(filepath.Join("./result", subDir.Name()))
+		sqlFiles := GetQueries(filepath.Join(TestConfig.SQLDir, subDir.Name()))
 		sqlFilePtrs := make([]*QueryFile, len(sqlFiles))
 		for i, sqlFile := range sqlFiles {
 			sqlFilePtrs[i] = &sqlFile
 		}
 		TestTTL(func() error {
 			return RunMultiple(db, sqlFilePtrs)
-		}, subDir.Name()+"par")
+		}, subDir.Name()+"_par")
 		breakTime()
 	}
 }
 
 func testNormalStress(db *sql.DB) {
-	sqlFiles := GetQueries("./result")
+	sqlFiles := GetQueries(
+		TestConfig.SQLDir,
+	)
 	for _, query := range sqlFiles {
 		StressTest(func() error {
 			return RunSingle(db, &query)
-		}, query.fileName)
+		}, query.getFileName())
 		breakTime()
 	}
 }
 
 func testParStress(db *sql.DB) {
-	subDirs, err := os.ReadDir("./result")
+	subDirs, err := os.ReadDir(TestConfig.SQLDir)
 	if err != nil {
 		log.Fatalf("Failed to read directory: %v", err)
 	}
@@ -96,14 +103,26 @@ func testParStress(db *sql.DB) {
 		if !subDir.IsDir() {
 			continue
 		}
-		sqlFiles := GetQueries(filepath.Join("./result", subDir.Name()))
+		sqlFiles := GetQueries(filepath.Join(TestConfig.SQLDir, subDir.Name()))
 		sqlFilePtrs := make([]*QueryFile, len(sqlFiles))
 		for i, sqlFile := range sqlFiles {
 			sqlFilePtrs[i] = &sqlFile
 		}
 		StressTest(func() error {
 			return RunMultiple(db, sqlFilePtrs)
-		}, subDir.Name()+"par")
+		}, subDir.Name()+"_par")
 		breakTime()
+	}
+}
+
+func testAcc(db *sql.DB) {
+	sqlFiles := GetQueries(TestConfig.SQLDir)
+	for _, query := range sqlFiles {
+		fmt.Printf("-------START TEST ACC %s ---------\n", query.fileName)
+		err := TestAcc(db, &query)
+		if err != nil {
+			log.Print(err)
+		}
+		fmt.Printf("--------------Test ACC %s DONE-------------\n", query.fileName)
 	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -16,6 +17,7 @@ var X_STRESS = TestConfig.XStress
 var WARMING_TIME = TestConfig.WarmingTime
 var COOL_DOWN_SECOND = TestConfig.CoolDownSecond
 var BREAK_TIME_SECOND = TestConfig.BreakTimeSecond
+var RESULTS_DIR = TestConfig.ResultTest
 
 // Function to pause execution for the cool-down period
 func coolDown() {
@@ -59,16 +61,16 @@ func TestTTL(f func() error, id string) {
 		"times":           times,
 	}
 
-	file, err := os.Create(fmt.Sprintf("%s_ttl.json", id))
+	file, err := os.Create(fmt.Sprintf("%s/ttl_%s.json", RESULTS_DIR, id))
 	if err != nil {
-		log.Fatalf("Error opening file: %v\n", err)
+		log.Printf("Error opening file: %v\n", err)
 		return
 	}
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
 	if err := encoder.Encode(logData); err != nil {
-		log.Fatalf("Error encoding JSON to file: %v\n", err)
+		log.Printf("Error encoding JSON to file: %v\n", err)
 	}
 	log.Printf("-----------END TTL %v -------------", id)
 }
@@ -107,16 +109,16 @@ func StressTest(f func() error, id string) {
 			break
 		}
 	}
-	file, err := os.OpenFile(fmt.Sprintf("%s_stress.json", id), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(fmt.Sprintf("%s/stress_%s.json", RESULTS_DIR, id), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		log.Fatalf("Error opening file: %v\n", err)
+		log.Printf("Error opening file: %v\n", err)
 		return
 	}
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
 	if err := encoder.Encode(results); err != nil {
-		log.Fatalf("Error encoding JSON to file: %v\n", err)
+		log.Printf("Error encoding JSON to file: %v\n", err)
 	}
 	log.Printf("--------END STRESS %v --------------\n", id)
 }
@@ -133,6 +135,7 @@ func stressTest(f func() error, id string, k int) ([]int64, bool) {
 			start := time.Now()
 			err := f()
 			if err != nil {
+				log.Println(err)
 				mu.Lock()
 				fail++
 				mu.Unlock()
@@ -143,4 +146,58 @@ func stressTest(f func() error, id string, k int) ([]int64, bool) {
 	wg.Wait()
 	log.Printf("Stress %s Test: %d/%d fails executions\n", id, fail, k)
 	return durations, fail > 0
+}
+
+type CorrectRs struct {
+	Name       string `json:"name"`
+	TestCount  int64  `json:"testCount"`
+	Count      int64  `json:"count"`
+	UnionCount int64  `json:"unionCount"`
+	Sucess     bool   `json:"sucess"`
+}
+
+func TestAcc(db *sql.DB, query *QueryFile) error {
+	rs := CorrectRs{}
+	err := query.CreateTempTable(db)
+	defer query.DropTempTable(db)
+	if err != nil {
+		return err
+	}
+	rs.Count, err = query.GetNumberOfRows(db)
+	if err != nil {
+		return err
+	}
+	log.Printf("Number of rows: %d\n", rs.Count)
+	testQuery, err := query.GetTestSql()
+	if err != nil {
+		return err
+	}
+	err = testQuery.CreateTempTable(db)
+	defer testQuery.DropTempTable(db)
+	if err != nil {
+		return err
+	}
+	rs.TestCount, err = testQuery.GetNumberOfRows(db)
+	if err != nil {
+		return err
+	}
+	log.Printf("Number of rows: %d\n", rs.TestCount)
+	if rs.TestCount == rs.Count {
+		rs.UnionCount, err = GetUnionCountQueryFromTemp(testQuery, query, db)
+		if err != nil {
+			return err
+		}
+		log.Printf("Number of rows: %d\n", rs.UnionCount)
+	}
+	rs.Sucess = rs.TestCount == rs.Count && rs.Count == rs.UnionCount
+	file, err := os.OpenFile(fmt.Sprintf("%s/correct_%s.json", RESULTS_DIR, query.getFileName()), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	encoder := json.NewEncoder(file)
+	if err := encoder.Encode(rs); err != nil {
+		log.Printf("Error encoding JSON to file: %v\n", err)
+	}
+	return nil
 }

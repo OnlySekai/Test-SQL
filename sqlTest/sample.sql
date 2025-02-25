@@ -1,0 +1,5 @@
+SELECT
+  1 AS A
+UNION
+SELECT
+  2 AS A

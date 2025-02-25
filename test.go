@@ -153,7 +153,7 @@ type CorrectRs struct {
 	TestCount  int64  `json:"testCount"`
 	Count      int64  `json:"count"`
 	UnionCount int64  `json:"unionCount"`
-	Sucess     bool   `json:"sucess"`
+	Success    bool   `json:"success"`
 }
 
 func TestAcc(db *sql.DB, query *QueryFile) error {
@@ -189,7 +189,7 @@ func TestAcc(db *sql.DB, query *QueryFile) error {
 		}
 		log.Printf("Number of rows: %d\n", rs.UnionCount)
 	}
-	rs.Sucess = rs.TestCount == rs.Count && rs.Count == rs.UnionCount
+	rs.Success = rs.TestCount == rs.Count && rs.Count == rs.UnionCount
 	file, err := os.OpenFile(fmt.Sprintf("%s/correct_%s.json", RESULTS_DIR, query.getFileName()), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return err

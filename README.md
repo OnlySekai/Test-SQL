@@ -34,3 +34,6 @@ go build
 - `acc`: Accurate test
 - `nor`: Test 1-1 sql-trx.
 - `par`: Test n-1 sql-trx. All queries which have same trx are put together in child folder of `results`
+
+4. Use AI to generate diagram from json
+   ![Bar char from json](./images/barchar.png)
